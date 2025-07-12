@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Form Pemesanan Sembako</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      background: #fff;
+      padding: 25px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="tel"],
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .produk-item {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .produk-item input[type="number"] {
+      width: 60px;
+      margin-left: 10px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .pesanan-list {
+      margin-top: 40px;
+    }
+    .pesanan-item {
+      background: #f9f9f9;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Form Pemesanan Sembako</h2>
+    <form id="form-pesanan">
+      <label for="nama">Nama Lengkap:</label>
+      <input type="text" id="nama" name="nama" required />
+
+      <label for="alamat">Alamat Pengiriman:</label>
+      <textarea id="alamat" name="alamat" rows="3" required></textarea>
+
+      <label for="telepon">Nomor Telepon:</label>
+      <input type="tel" id="telepon" name="telepon" required />
+
+      <label>Pilih Produk dan Jumlah:</label>
+      <div id="daftar-produk">
+        <!-- Produk akan dimasukkan lewat JavaScript -->
+      </div>
+
+      <label for="catatan">Catatan Tambahan (Opsional):</label>
+      <textarea id="catatan" name="catatan" rows="2"></textarea>
+
+      <button type="submit">Kirim Pesanan</button>
+    </form>
+
+    <div class="pesanan-list">
+      <h2>Daftar Pesanan</h2>
+      <div id="daftar-pesanan"></div>
+    </div>
+  </div>
+
+  <script>
+    const produkList = [
+      "Beras 5kg", "Minyak Goreng 1L", "Gula Pasir 1kg", "Telur Ayam 1kg",
+      "Garam", "Teh", "Kopi", "Susu", "Indomie 1 Dus", "Daging Ayam 1 Ekor"
+    ];
+
+    const daftarProduk = document.getElementById('daftar-produk');
+    produkList.forEach((produk, index) => {
+      const div = document.createElement('div');
+      div.className = 'produk-item';
+      div.innerHTML = `
+        <input type="checkbox" id="produk-${index}" name="produk" value="${produk}">
+        <label for="produk-${index}">${produk}</label>
+        <input type="number" min="1" placeholder="Qty" id="qty-${index}" disabled />
+      `;
+      daftarProduk.appendChild(div);
+    });
+
+    // Aktifkan input jumlah saat checkbox dicentang
+    daftarProduk.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox') {
+        const qtyInput = document.getElementById('qty-' + e.target.id.split('-')[1]);
+        qtyInput.disabled = !e.target.checked;
+        if (!e.target.checked) qtyInput.value = '';
+      }
+    });
+
+    const form = document.getElementById('form-pesanan');
+    const daftarPesanan = document.getElementById('daftar-pesanan');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      localStorage.removeItem('pesanan');
+      tampilkanPesanan();
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // Ambil produk yang dicentang
+      const produkDipilih = [];
+      produkList.forEach((produk, index) => {
+        const checkbox = document.getElementById('produk-' + index);
+        const qty = document.getElementById('qty-' + index).value;
+        if (checkbox.checked && qty > 0) {
+          produkDipilih.push(`${produk} x ${qty}`);
+        }
+      });
+
+      if (produkDipilih.length === 0) {
+        alert("Pilih minimal satu produk dan jumlahnya!");
+        return;
+      }
+
+      const pesanan = {
+        nama: form.nama.value,
+        alamat: form.alamat.value,
+        telepon: form.telepon.value,
+        produk: produkDipilih,
+        catatan: form.catatan.value
+      };
+
+      let semuaPesanan = JSON.parse(localStorage.getItem('pesanan')) || [];
+      semuaPesanan.push(pesanan);
+      localStorage.setItem('pesanan', JSON.stringify(semuaPesanan));
+
+      form.reset();
+      // Reset jumlah produk
+      document.querySelectorAll('#daftar-produk input[type="number"]').forEach(i => i.disabled = true);
+      tampilkanPesanan();
+    });
+
+    function tampilkanPesanan() {
+      const semuaPesanan = JSON.parse(localStorage.getItem('pesanan')) || [];
+      daftarPesanan.innerHTML = '';
+
+      if (semuaPesanan.length === 0) {
+        daftarPesanan.innerHTML = '<p>Belum ada pesanan.</p>';
+        return;
+      }
+
+      semuaPesanan.forEach((data) => {
+        const item = document.createElement('div');
+        item.className = 'pesanan-item';
+        item.innerHTML = `
+          <strong>${data.nama}</strong><br>
+          Produk: ${data.produk.join(', ')}<br>
+          Alamat: ${data.alamat}<br>
+          Telepon: ${data.telepon}<br>
+          Catatan: ${data.catatan || '-'}
+        `;
+        daftarPesanan.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>
